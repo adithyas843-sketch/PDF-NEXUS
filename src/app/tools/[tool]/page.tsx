@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import ToolDialog, { ToolId } from '@/components/ToolDialog';
 
 const tools: { id: ToolId; title: string }[] = [
-  { id: 'merge', title: 'Merge PDF' }, { id: 'split', title: 'Split PDF' },
+  { id: 'merge', title: 'Merge PDF' }, { id: 'split', title: 'Split PDF' }, { id: 'extract', title: 'Extract pages' },
   { id: 'rotate', title: 'Rotate PDF' }, { id: 'reorder', title: 'Reorder pages' },
   { id: 'delete', title: 'Delete pages' }, { id: 'jpg-to-pdf', title: 'JPG to PDF' },
-  { id: 'pdf-to-jpg', title: 'PDF to JPG' }, { id: 'add-text', title: 'Add text' },
+  { id: 'pdf-to-jpg', title: 'PDF to JPG' }, { id: 'edit', title: 'Edit PDF' }, { id: 'add-text', title: 'Add text' },
   { id: 'watermark', title: 'Add watermark' }, { id: 'protect', title: 'Protect PDF' },
 ];
 

@@ -1,11 +1,11 @@
 # PDF Nexus
 
-A minimal, responsive PDF workspace built with Next.js, TypeScript, Tailwind CSS, PDF.js, and pdf-lib. Most operations run in the browser; files are not uploaded to an application server unless you explicitly use the optional password-protection API.
+PDF Nexus is a Next.js PDF workspace with browser-based viewing, page operations, and annotations. It uses PDF.js for rendering and pdf-lib for local PDF changes. Password encryption is provided by an optional FastAPI service.
 
 ## Prerequisites
 
 - Node.js 20 or newer and pnpm 9+
-- Python 3.10 or newer only for password protection
+- Python 3.10 or newer for the optional password service
 
 ## Installation
 
@@ -20,7 +20,27 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:3000. Browser tools accept PDFs up to 50 MB each. Password protection requires the optional API:
+Open http://localhost:3000. Browser tools accept files up to 50 MB. PDF.js's matching worker is copied from the installed dependency into `public/` before the dev server and production build.
+
+## Features implemented
+
+- PDF preview with page thumbnails, page numbers, a selectable text layer, page navigation, zoom, fit-to-page, and preview rotation. Thumbnails render as they approach the viewport.
+- Merge multiple PDFs in a user-selected order. The file list can be reordered, and each input can be previewed.
+- Remove, extract/split, rotate, and reorder pages using thumbnail selection or manual page entry. Page changes affect the exported PDF. Reordering supports drag and drop.
+- Edit PDF with placed text, freehand ink, highlights, rectangles, ellipses, lines, arrows, and JPG/PNG insertion. Added objects can be selected, moved, resized where applicable, deleted, and undone/redone. An eraser removes editor-created marks.
+- Convert JPG/PNG images to PDF and PDF pages to individual JPG downloads.
+- Add simple text to each page, apply a text watermark, and encrypt a PDF with a password through the optional API.
+
+## Editor and PDF limitations
+
+- Existing PDF text is selectable when the source contains a text layer. Direct in-place editing of arbitrary original text is not supported. Added text is an overlay; deleting an overlay does not remove or redact underlying source content.
+- Highlights are area annotations, not semantic text annotations. The pen is a freehand polyline. Editor annotations can be exported, but the original document's content and layout are not rewritten.
+- Split/extract currently exports one selected page set as one PDF; it does not create multiple range files or a ZIP archive.
+- PDF to JPG creates one download per page. Large documents can use substantial browser memory despite the 50 MB input limit.
+- Password-protected input PDFs cannot be previewed or edited by the browser tools. Password encryption is supported through FastAPI; password removal/unlocking is not implemented.
+- OCR, PDF compression, PDF/Office document conversion, page numbers, headers/footers, crop, compare, repair, cryptographic signatures, genuine redaction, and whiteout are not implemented. No paid API or login is required.
+
+## Optional password-protection API
 
 ```bash
 python -m venv .venv
@@ -30,7 +50,7 @@ pip install -r backend/requirements.txt
 uvicorn backend.main:app --reload --port 8000
 ```
 
-For a separately hosted API, set `NEXT_PUBLIC_PDF_API_URL` to its HTTPS origin at build time and set `PDF_NEXUS_CORS_ORIGINS` on the API to a comma-separated allowlist of exact frontend origins. The sample API permits only localhost by default.
+The local default is `http://localhost:8000`. For a separately hosted API, set `NEXT_PUBLIC_PDF_API_URL` to its HTTPS origin at frontend build time. Set `PDF_NEXUS_CORS_ORIGINS` on the API to a comma-separated list of exact frontend origins. The API keeps request bytes in memory and does not persist uploads.
 
 ## Tests and checks
 
@@ -39,20 +59,10 @@ pnpm test
 pnpm build
 ```
 
-The core merge, split, rotate, reorder, delete and page parsing operations have automated Vitest coverage. Tests generate small sample PDFs in memory. For manual checks, use any unencrypted PDF under 50 MB and a JPG or PNG image. The backend endpoint can be exercised with a POST to `/protect`, sending JSON with base64 `pdf` bytes and a `password`; it returns encrypted PDF bytes. Install backend requirements before starting it.
+Vitest generates sample PDFs in memory and checks merge, page extraction, deletion, rotation, ordering, validation, and annotation export. For manual preview checks, use an unencrypted multi-page PDF under 50 MB with selectable text. For editor image insertion, use a JPG or PNG under 10 MB.
 
 ## Deployment
 
-Deploy the frontend to Vercel using the default Next.js build settings. No server secrets are required by the frontend. Deploy the optional FastAPI service separately to a Python host, use HTTPS, configure a strict CORS origin, set `NEXT_PUBLIC_PDF_API_URL`, and apply request-size limits at the host/proxy. The API keeps uploaded bytes in memory and has no persistent upload directory.
+The frontend is compatible with the standard Next.js Vercel build. PDF viewing and editing run in the browser; the worker is copied into the build's public assets. Vercel does not host the optional FastAPI service: deploy it separately to a Python host, configure HTTPS and a strict CORS allowlist, and set `NEXT_PUBLIC_PDF_API_URL`. Apply request-size and execution limits at that host. Validate memory use and the deployed preview flow with representative documents before public launch.
 
-## Current feature limitations
-
-- Merge, page extraction (one output document), rotation, page reordering, page deletion, JPG/PNG to PDF, PDF to JPG (one download per page), text annotation, text watermark, and password encryption are implemented.
-- Password encryption requires the optional FastAPI service and uses AES-256 through pypdf. `pdf-lib` itself cannot encrypt output.
-- PDFs are limited to 50 MB. Very large or image-heavy documents may be slow or run out of browser memory.
-- PDF to JPG uses PDF.js. The matching worker is copied to `public/` automatically before development and builds.
-- Text insertion is a simple annotation at a fixed location on every page, not a full layout-aware editor. Watermarks are plain text.
-- This initial app does not include OCR, compression, form filling, signatures, or visual page previews/reordering.
-- Password-protected inputs are not supported by the browser tools. Validate the optional API deployment and operating limits before exposing it to untrusted public traffic.
-
-Uploaded documents are excluded from source control by `.gitignore`.
+Uploaded PDFs and images, dependency folders, build output, and environment files are excluded by `.gitignore`. `.env.example` contains only the local API URL and no secrets.
